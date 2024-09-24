@@ -1,6 +1,11 @@
 ﻿using e_commerce.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 namespace e_commerce.Controllers
 {
@@ -11,12 +16,14 @@ namespace e_commerce.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IWebHostEnvironment _hostingEnvironment;
+        private readonly IConfiguration _configuration;
 
-        public AccountController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, IWebHostEnvironment webHostEnvironment)
+        public AccountController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, IWebHostEnvironment webHostEnvironment, IConfiguration configuration)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _hostingEnvironment = webHostEnvironment;
+            _configuration = configuration;
         }
 
         [HttpPost("register")]
@@ -85,14 +92,41 @@ namespace e_commerce.Controllers
                 return Unauthorized("Invalid login attempt.");
             }
 
+            // Generate JWT Token
+            var token = GenerateJwtToken(user);
+
             // Check if the user is a supplier or a customer
             var userInfo = new
             {
                 user.Email,
-                IsSupplier = user.isSupplier
+                IsSupplier = user.isSupplier,
+                token = token,
             };
 
             return Ok(userInfo); // Returning user info including isSupplier
+        }
+
+        private string GenerateJwtToken(ApplicationUser user)
+        {
+            var jwtSettings = _configuration.GetSection("JwtSettings");
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]));
+            var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            var claims = new[]
+            {
+                new Claim(JwtRegisteredClaimNames.Sub, user.Email),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                new Claim(ClaimTypes.NameIdentifier, user.Id),
+                new Claim(ClaimTypes.Role, user.isSupplier ? "Supplier" : "Customer")
+            };
+
+            var token = new JwtSecurityToken(
+                claims: claims,
+                expires: DateTime.Now.AddMinutes(double.Parse(jwtSettings["ExpiryInMinutes"])),
+                signingCredentials: credentials
+            );
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
         // Logout
