@@ -33,7 +33,7 @@ namespace e_commerce.Controllers
         {
             var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            var user = await _userManager.FindByEmailAsync(currentUserId);
+            var user = await _userManager.FindByEmailAsync(currentUserId);  
 
             var products = await _productService.GetProductsBySupplierId(user.Id);
 
