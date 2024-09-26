@@ -134,7 +134,7 @@ namespace e_commerce.Controllers
         public async Task<IActionResult> Logout()
         {
             await _signInManager.SignOutAsync();
-            return RedirectToAction("Index", "Home");
+            return Ok("Logged out successfully.");
         }
     }
 }
