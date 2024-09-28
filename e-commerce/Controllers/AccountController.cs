@@ -136,5 +136,86 @@ namespace e_commerce.Controllers
             await _signInManager.SignOutAsync();
             return Ok("Logged out successfully.");
         }
+
+        [HttpGet("profile")]
+        public async Task<IActionResult> GetProfile()
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            var user1 = await _userManager.FindByEmailAsync(userId);
+
+            userId = user1.Id;
+            var user = await _userManager.FindByIdAsync(userId);
+
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            var userInfo = new
+            {
+                user.FirstName,
+                user.LastName,
+                user.Email,
+                user.ProfileImageURL // This assumes you store profile images in the user record
+            };
+
+            return Ok(userInfo);
+        }
+
+        [HttpPut("update-profile")]
+        public async Task<IActionResult> UpdateProfile([FromForm] UpdateProfileViewModel model)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var user = await _userManager.FindByIdAsync(userId);
+
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            // Update user fields
+            user.FirstName = model.FirstName;
+            user.LastName = model.LastName;
+            user.Email = model.Email;
+
+            // If a new image is provided, save it
+            if (model.ProfileImage != null)
+            {
+                var imageUrl = await SaveImageAsync(model.ProfileImage); // Implement this to save the image and return the URL
+                user.ProfileImageURL = imageUrl;
+            }
+
+            var result = await _userManager.UpdateAsync(user);
+
+            if (!result.Succeeded)
+            {
+                return BadRequest(result.Errors);
+            }
+
+            return Ok(new
+            {
+                user.FirstName,
+                user.LastName,
+                user.Email,
+                user.ProfileImageURL
+            });
+        }
+
+        // Helper function to save the image
+        private async Task<string> SaveImageAsync(IFormFile image)
+        {
+            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images");
+            var uniqueFileName = Guid.NewGuid().ToString() + "_" + image.FileName;
+            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+            using (var fileStream = new FileStream(filePath, FileMode.Create))
+            {
+                await image.CopyToAsync(fileStream);
+            }
+
+            // Return the relative URL to be stored in the database
+            return $"/images/{uniqueFileName}";
+        }
     }
 }
