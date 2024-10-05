@@ -27,6 +27,20 @@ namespace e_commerce.Controllers
             _productService = productService;
         }
 
+        // GET: api/Products
+        [HttpGet("all")]
+        public async Task<ActionResult<IEnumerable<Product>>> GetProducts(string search = "")
+        {
+            // Fetch products with optional search term
+            var products = await _context.Products
+                .Where(p => string.IsNullOrEmpty(search) ||
+                            p.Name.Contains(search) ||
+                            p.Description.Contains(search))
+                .ToListAsync();
+
+            return Ok(products);
+        }
+
         [HttpGet]
         [Authorize]
         public async Task<IActionResult> GetProductsSupplier()
