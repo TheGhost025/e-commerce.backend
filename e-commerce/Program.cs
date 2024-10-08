@@ -23,6 +23,7 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddDefaultTokenProviders();
 
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<CartService>();
 
 // Configure CORS
 builder.Services.AddCors(options =>
