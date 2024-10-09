@@ -1,7 +1,9 @@
-﻿using e_commerce.Models;
+﻿using e_commerce.Context;
+using e_commerce.Models;
 using e_commerce.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace e_commerce.Controllers
@@ -10,13 +12,15 @@ namespace e_commerce.Controllers
     [Route("api/[controller]")]
     public class CartController : ControllerBase
     {
+        private readonly AppDbContext _context;
         private readonly CartService _cartService;
         private readonly UserManager<ApplicationUser> _userManager;
 
-        public CartController(CartService cartService , UserManager<ApplicationUser> userManager)
+        public CartController(CartService cartService , UserManager<ApplicationUser> userManager, AppDbContext context)
         {
             _cartService = cartService;
             _userManager = userManager;
+            _context = context;
         }
 
         [HttpPost("add")]
@@ -63,5 +67,17 @@ namespace e_commerce.Controllers
             await _cartService.RemoveFromCart(userId, productId);
             return Ok(new { message = "Item removed from cart" });
         }
+
+        [HttpPut("updateQuantity")]
+        public async Task<IActionResult> UpdateCartItemQuantity([FromForm] AddToCartRequest dto)
+        {
+            var cartItem = await _context.CartItems.FindAsync(dto.ProductId);
+            if (cartItem == null) return NotFound();
+
+            cartItem.Quantity = dto.Quantity;
+            await _context.SaveChangesAsync();
+            return Ok(cartItem);
+        }
+
     }
 }
