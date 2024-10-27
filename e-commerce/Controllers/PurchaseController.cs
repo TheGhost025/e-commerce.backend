@@ -90,5 +90,41 @@ namespace e_commerce.Controllers
             });
         }
 
+        [HttpGet("history")]
+        public async Task<IActionResult> GetPurchaseHistory()
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            // Retrieve user by email
+            var user = await _userManager.FindByEmailAsync(userId);
+            userId = user?.Id;
+
+            // Get order history for the user
+            var orderHistories = await _context.Histories
+                .Where(h => h.Order.CustomerId == userId)
+                .Select(h => new
+                {
+                    h.OrderId,
+                    h.OrderDate,
+                    OrderItems = h.Order.OrderItems.Select(oi => new
+                    {
+                        oi.ProductId,
+                        oi.Quantity,
+                        oi.Price,
+                        ProductName = oi.Product.Name,
+                         ProductImageUrl = oi.Product.ImageURL
+                    })
+                })
+                .ToListAsync();
+
+            if (!orderHistories.Any())
+            {
+                return NotFound("No purchase history found.");
+            }
+
+            return Ok(orderHistories);
+        }
+
+
     }
 }
