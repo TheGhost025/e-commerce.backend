@@ -66,7 +66,9 @@ namespace e_commerce.Controllers
                     return Ok("User registered successfully");
                 }
                 else {
-                    return BadRequest(result.Errors);
+                    // Send back specific errors
+                    var errors = result.Errors.Select(e => e.Description).ToList();
+                    return BadRequest(new { Errors = errors });
                 }
             }
             else
